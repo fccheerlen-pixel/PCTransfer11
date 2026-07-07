@@ -129,29 +129,62 @@ public sealed class PackageBuilder
     {
         await Task.Run(() =>
         {
-            Directory.CreateDirectory(destinationDir);
-            foreach (string dirPath in Directory.GetDirectories(sourceDir, "*", SearchOption.AllDirectories))
-            {
-                ct.ThrowIfCancellationRequested();
-                Directory.CreateDirectory(dirPath.Replace(sourceDir, destinationDir));
-            }
-            foreach (string filePath in Directory.GetFiles(sourceDir, "*", SearchOption.AllDirectories))
-            {
-                ct.ThrowIfCancellationRequested();
-                try
-                {
-                    File.Copy(filePath, filePath.Replace(sourceDir, destinationDir), overwrite: true);
-                }
-                catch (IOException)
-                {
-                    // Bestand is in gebruik door een lopende applicatie (bv. een browser-databasebestand) - overslaan.
-                }
-                catch (UnauthorizedAccessException)
-                {
-                    // Geen toegang (bv. systeembestand) - overslaan.
-                }
-            }
+            CopyDirectoryRecursive(sourceDir, destinationDir, ct);
         }, ct);
+    }
+
+    /// <summary>
+    /// Kopieert een map recursief, maar slaat reparse points (junctions/symlinks)
+    /// over. Windows gebruikt zulke junctions voor legacy-mappen als
+    /// "Documenten\Mijn afbeeldingen" die eigenlijk naar elders verwijzen; direct
+    /// benaderen daarvan geeft altijd "Access denied" voor niet-Verkenner-
+    /// processen. De echte doelmap wordt sowieso al los meegenomen als die apart
+    /// in de selectie staat, dus overslaan hier verliest geen data.
+    /// </summary>
+    private void CopyDirectoryRecursive(string sourceDir, string destinationDir, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        var dirInfo = new DirectoryInfo(sourceDir);
+        if (dirInfo.Attributes.HasFlag(FileAttributes.ReparsePoint))
+        {
+            // Junction/symlink: overslaan om Access-denied te voorkomen.
+            return;
+        }
+
+        Directory.CreateDirectory(destinationDir);
+
+        foreach (string filePath in Directory.EnumerateFiles(sourceDir))
+        {
+            ct.ThrowIfCancellationRequested();
+            try
+            {
+                string destFile = Path.Combine(destinationDir, Path.GetFileName(filePath));
+                File.Copy(filePath, destFile, overwrite: true);
+            }
+            catch (IOException)
+            {
+                // Bestand is in gebruik door een lopende applicatie (bv. een browser-databasebestand) - overslaan.
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // Geen toegang (bv. systeembestand) - overslaan.
+            }
+        }
+
+        foreach (string subDir in Directory.EnumerateDirectories(sourceDir))
+        {
+            ct.ThrowIfCancellationRequested();
+            try
+            {
+                string destSubDir = Path.Combine(destinationDir, Path.GetFileName(subDir));
+                CopyDirectoryRecursive(subDir, destSubDir, ct);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // Geen toegang tot deze submap - overslaan en doorgaan met de rest.
+            }
+        }
     }
 
     /// <summary>
@@ -196,3 +229,4 @@ public sealed class PackageBuilder
         catch { /* best effort opruimen van tijdelijke bestanden */ }
     }
 }
+
