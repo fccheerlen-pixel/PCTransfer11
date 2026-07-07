@@ -1,0 +1,147 @@
+<Window x:Class="PCTransfer11.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="PCTransfer11" Height="640" Width="820"
+        WindowStartupLocation="CenterScreen">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,16">
+            <TextBlock Text="PCTransfer11" Style="{StaticResource HeaderText}"/>
+            <TextBlock Text="Zet bestanden en programma-instellingen over naar een andere Windows-pc."
+                       Style="{StaticResource SubtleText}" Margin="0"/>
+        </StackPanel>
+
+        <TabControl Grid.Row="1" BorderThickness="0" Background="Transparent">
+
+            <!-- ================= TAB 1: SELECTEREN ================= -->
+            <TabItem Header="1. Selecteren">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,12,0,0">
+                    <StackPanel>
+
+                        <Border Style="{StaticResource CardBorder}">
+                            <StackPanel>
+                                <TextBlock Text="Bestanden en mappen" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                <ItemsControl x:Name="FilesItemsControl">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <CheckBox Content="{Binding DisplayName}"
+                                                      IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                                      IsEnabled="{Binding Exists}"
+                                                      ToolTip="{Binding Path}"
+                                                      Margin="0,4"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <Button Content="+ Aangepaste map toevoegen ..." Style="{StaticResource SecondaryButton}"
+                                        HorizontalAlignment="Left" Margin="0,8,0,0" Click="AddCustomFolder_Click"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource CardBorder}">
+                            <StackPanel>
+                                <TextBlock Text="Programma-instellingen" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                <TextBlock Style="{StaticResource SubtleText}"
+                                           Text="Alleen applicaties die op dit systeem gevonden zijn kunnen worden aangevinkt. Wachtwoorden die in browsers zijn opgeslagen gaan nooit mee (die zijn versleuteld aan dit Windows-account gekoppeld)."/>
+                                <ItemsControl x:Name="AppsItemsControl">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                                      IsEnabled="{Binding IsAvailable}"
+                                                      ToolTip="{Binding Note}"
+                                                      Margin="0,4">
+                                                <TextBlock Text="{Binding DisplayName}"/>
+                                            </CheckBox>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ================= TAB 2: OVERZETTEN ================= -->
+            <TabItem Header="2. Overzetten">
+                <StackPanel Margin="0,12,0,0">
+
+                    <Border Style="{StaticResource CardBorder}">
+                        <StackPanel>
+                            <TextBlock Text="Hoe wil je overzetten?" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <RadioButton x:Name="ModeNetworkRadio" GroupName="Mode" Content="Rechtstreeks via het netwerk (beide pc's tegelijk aan)"
+                                         IsChecked="True" Margin="0,4" Checked="ModeRadio_Changed"/>
+                            <RadioButton x:Name="ModeBackupRadio" GroupName="Mode" Content="Via een back-upbestand (USB-stick / externe schijf)"
+                                         Margin="0,4" Checked="ModeRadio_Changed"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- ---- Netwerkmodus ---- -->
+                    <Border x:Name="NetworkPanel" Style="{StaticResource CardBorder}">
+                        <StackPanel>
+                            <TextBlock Text="Netwerkoverdracht" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <RadioButton x:Name="RoleReceiverRadio" GroupName="Role" Content="Deze pc is de ONTVANGER (nieuwe pc)"
+                                         IsChecked="True" Margin="0,4" Checked="RoleRadio_Changed"/>
+                            <RadioButton x:Name="RoleSenderRadio" GroupName="Role" Content="Deze pc is de ZENDER (oude pc)"
+                                         Margin="0,4" Checked="RoleRadio_Changed"/>
+
+                            <!-- Ontvanger -->
+                            <StackPanel x:Name="ReceiverPanel" Margin="0,12,0,0">
+                                <TextBlock x:Name="ReceiverInfoText" Style="{StaticResource SubtleText}"/>
+                                <Button Content="Start ontvangen" Style="{StaticResource AccentButton}"
+                                        HorizontalAlignment="Left" Click="StartReceive_Click"/>
+                            </StackPanel>
+
+                            <!-- Zender -->
+                            <StackPanel x:Name="SenderPanel" Margin="0,12,0,0" Visibility="Collapsed">
+                                <Button Content="Zoek pc's op het netwerk" Style="{StaticResource SecondaryButton}"
+                                        HorizontalAlignment="Left" Margin="0,0,0,8" Click="DiscoverReceivers_Click"/>
+                                <ComboBox x:Name="ReceiversComboBox" Margin="0,0,0,8" MinWidth="300" HorizontalAlignment="Left"/>
+                                <TextBlock Text="Of vul handmatig een IP-adres in:" Style="{StaticResource SubtleText}" Margin="0,0,0,4"/>
+                                <TextBox x:Name="ManualIpTextBox" Width="220" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+                                <Button Content="Start verzenden" Style="{StaticResource AccentButton}"
+                                        HorizontalAlignment="Left" Click="StartSend_Click"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- ---- Back-upbestand-modus ---- -->
+                    <Border x:Name="BackupPanel" Style="{StaticResource CardBorder}" Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock Text="Back-upbestand" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <TextBlock Text="Maak op de oude pc een back-upbestand en zet het op de nieuwe pc terug."
+                                       Style="{StaticResource SubtleText}"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                <Button Content="Back-up maken ..." Style="{StaticResource AccentButton}"
+                                        Margin="0,0,8,0" Click="CreateBackup_Click"/>
+                                <Button Content="Back-up terugzetten ..." Style="{StaticResource SecondaryButton}"
+                                        Click="RestoreBackup_Click"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                </StackPanel>
+            </TabItem>
+
+            <!-- ================= TAB 3: VOORTGANG ================= -->
+            <TabItem Header="3. Voortgang">
+                <Grid Margin="0,12,0,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <ProgressBar x:Name="TransferProgressBar" Grid.Row="0" Minimum="0" Maximum="1" Margin="0,0,0,12"/>
+                    <Border Grid.Row="1" Style="{StaticResource CardBorder}" Padding="0">
+                        <TextBox x:Name="LogTextBox" IsReadOnly="True" BorderThickness="0"
+                                 TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
+                                 FontFamily="Consolas" Padding="12" Background="Transparent"/>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+        </TabControl>
+    </Grid>
+</Window>
