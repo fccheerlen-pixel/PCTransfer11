@@ -79,7 +79,7 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- ---- Netwerkmodus ---- -->
+                    <!-- Netwerkmodus -->
                     <Border x:Name="NetworkPanel" Style="{StaticResource CardBorder}">
                         <StackPanel>
                             <TextBlock Text="Netwerkoverdracht" FontWeight="SemiBold" Margin="0,0,0,8"/>
@@ -108,7 +108,7 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- ---- Back-upbestand-modus ---- -->
+                    <!-- Back-upbestand-modus -->
                     <Border x:Name="BackupPanel" Style="{StaticResource CardBorder}" Visibility="Collapsed">
                         <StackPanel>
                             <TextBlock Text="Back-upbestand" FontWeight="SemiBold" Margin="0,0,0,8"/>
