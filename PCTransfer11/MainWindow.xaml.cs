@@ -63,14 +63,9 @@ public partial class MainWindow : Window
         string downloads = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
         _fileItems.Add(new FileSelectionItem { DisplayName = "Downloads", Path = downloads });
 
-        // "Openbare" (Public) mappen: gedeelde mappen die niet aan één gebruikersaccount
-        // hangen (C:\Users\Public\...). Bestanden die iemand daar bewust in heeft gezet
-        // worden anders stilzwijgend overgeslagen.
-        _fileItems.Add(FileSelectionItem.ForSpecialFolder("Documenten (openbaar/gedeeld)", Environment.SpecialFolder.CommonDocuments));
-        _fileItems.Add(FileSelectionItem.ForSpecialFolder("Afbeeldingen (openbaar/gedeeld)", Environment.SpecialFolder.CommonPictures));
-        _fileItems.Add(FileSelectionItem.ForSpecialFolder("Video's (openbaar/gedeeld)", Environment.SpecialFolder.CommonVideos));
-        _fileItems.Add(FileSelectionItem.ForSpecialFolder("Muziek (openbaar/gedeeld)", Environment.SpecialFolder.CommonMusic));
-        _fileItems.Add(FileSelectionItem.ForSpecialFolder("Bureaublad (openbaar/gedeeld)", Environment.SpecialFolder.CommonDesktopDirectory));
+        // Let op: bewust GEEN "openbare/gedeelde" (Public, C:\Users\Public\...) mappen
+        // meer toevoegen. Er wordt alleen nog van het eigen gebruikersprofiel
+        // gebackupt, niet van het openbare/gedeelde profiel.
 
         foreach (var item in _fileItems)
             item.IsChecked = item.Exists;

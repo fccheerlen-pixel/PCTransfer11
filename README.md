@@ -30,8 +30,9 @@ verder — dat hebben we bij de Delphi/Lazarus-versie ook zo gedaan).
 ## Wat het doet
 
 - **Tab 1 – Selecteren**: vink mappen aan (Documenten, Afbeeldingen,
-  Bureaublad, Video's, Muziek, Downloads - elk zowel de eigen als de
-  openbare/gedeelde "Public"-variant - of voeg zelf een map toe) en/of
+  Bureaublad, Video's, Muziek, Downloads - alleen van het eigen
+  gebruikersprofiel, niet van het openbare/gedeelde "Public"-profiel -
+  of voeg zelf een map toe) en/of
   instellingen/gegevens van bekende apps: Chrome, Edge, Opera, Firefox,
   Internet Explorer/Edge-favorieten, Thunderbird, Outlook (.pst/.ost),
   Skype, VS Code, Windows Terminal, qBittorrent, AIMP, iTunes en de
