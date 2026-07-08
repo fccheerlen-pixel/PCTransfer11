@@ -57,6 +57,108 @@ public static class KnownApps
             },
             new AppProfile
             {
+                Id = "opera",
+                DisplayName = "Opera (bladwijzers, instellingen)",
+                ResolveDataFolder = () =>
+                {
+                    var path = Path.Combine(roamingAppData, "Opera Software", "Opera Stable");
+                    return Directory.Exists(path) ? path : null;
+                },
+                Note = "Bladwijzers en voorkeuren. Opgeslagen wachtwoorden gaan NIET mee."
+            },
+            new AppProfile
+            {
+                Id = "ie_edge_favorites",
+                DisplayName = "Favorieten (Internet Explorer / Edge)",
+                ResolveDataFolder = () =>
+                {
+                    var path = Environment.GetFolderPath(Environment.SpecialFolder.Favorites);
+                    return Directory.Exists(path) ? path : null;
+                },
+                Note = "Internet Explorer is verwijderd uit Windows 11, maar gebruikte dezelfde Favorieten-map " +
+                       "als Edge nog altijd gebruikt - deze map wordt hier meegenomen."
+            },
+            new AppProfile
+            {
+                Id = "thunderbird",
+                DisplayName = "Mozilla Thunderbird (e-mail, adresboek, instellingen)",
+                ResolveDataFolder = () =>
+                {
+                    var profilesRoot = Path.Combine(roamingAppData, "Thunderbird", "Profiles");
+                    if (!Directory.Exists(profilesRoot)) return null;
+                    var dirs = Directory.GetDirectories(profilesRoot);
+                    var preferred = dirs.FirstOrDefault(d => d.EndsWith(".default-release", StringComparison.OrdinalIgnoreCase));
+                    return preferred ?? dirs.FirstOrDefault();
+                },
+                Note = "Volledig profiel: e-mails, accounts, adresboek, filters en instellingen. Kan groot zijn " +
+                       "als er veel lokaal opgeslagen e-mail is."
+            },
+            new AppProfile
+            {
+                Id = "outlook",
+                DisplayName = "Outlook (.pst / .ost e-mailbestanden)",
+                ResolveDataFolder = () =>
+                {
+                    // Standaardlocatie voor .ost (cache) en eventuele .pst-bestanden.
+                    var path = Path.Combine(localAppData, "Microsoft", "Outlook");
+                    return Directory.Exists(path) ? path : null;
+                },
+                Note = "Let op: .ost-bestanden zijn alleen een lokale cache van een online postvak (Exchange/" +
+                       "Microsoft 365) en worden na terugzetten toch opnieuw gedownload door Outlook - die nemen " +
+                       "onnodig ruimte in maar zijn verder onschadelijk. Een .pst-bestand (bv. een lokaal " +
+                       "archief) is wél echt portable en wordt hiermee meegenomen. Accountinstellingen zelf " +
+                       "(wachtwoorden/tokens) gaan niet mee; die stel je op de nieuwe pc opnieuw in."
+            },
+            new AppProfile
+            {
+                Id = "skype",
+                DisplayName = "Skype (chatgeschiedenis, instellingen)",
+                ResolveDataFolder = () =>
+                {
+                    var path = Path.Combine(roamingAppData, "Microsoft", "Skype for Desktop");
+                    return Directory.Exists(path) ? path : null;
+                },
+                Note = "Lokale chatgeschiedenis en instellingen van de huidige Skype-app. " +
+                       "(MSN Messenger en AIM bestaan al jaren niet meer en hebben dus niets om over te zetten.)"
+            },
+            new AppProfile
+            {
+                Id = "qbittorrent",
+                DisplayName = "qBittorrent (instellingen, categorieën, torrent-status)",
+                ResolveDataFolder = () =>
+                {
+                    var path = Path.Combine(roamingAppData, "qBittorrent");
+                    return Directory.Exists(path) ? path : null;
+                },
+                Note = "Programma-instellingen, categorieën en de status/voortgang van torrents (BT_backup). " +
+                       "De gedownloade bestanden zelf gaan hier niet in mee - voeg die map desgewenst apart toe " +
+                       "op tab 1 via '+ Aangepaste map toevoegen'."
+            },
+            new AppProfile
+            {
+                Id = "aimp",
+                DisplayName = "AIMP (afspeellijsten, instellingen)",
+                ResolveDataFolder = () =>
+                {
+                    var path = Path.Combine(roamingAppData, "AIMP");
+                    return Directory.Exists(path) ? path : null;
+                },
+                Note = "Afspeellijsten en programma-instellingen van de geïnstalleerde (niet-portable) versie van AIMP."
+            },
+            new AppProfile
+            {
+                Id = "itunes",
+                DisplayName = "iTunes (bibliotheek)",
+                ResolveDataFolder = () =>
+                {
+                    var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), "iTunes");
+                    return Directory.Exists(path) ? path : null;
+                },
+                Note = "De iTunes-bibliotheek (iTunes Library.itl) en, als 'iTunes Media' op de standaardlocatie " +
+                       "staat, ook de muziek/video's zelf. Bij een aangepaste mediamap: voeg die apart toe op tab 1."
+            },
+            new AppProfile
+            {
                 Id = "vscode",
                 DisplayName = "Visual Studio Code (instellingen, sneltoetsen)",
                 ResolveDataFolder = () =>

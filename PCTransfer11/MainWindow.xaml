@@ -67,14 +67,15 @@
 
             <!-- ================= TAB 2: OVERZETTEN ================= -->
             <TabItem Header="2. Overzetten">
-                <StackPanel Margin="0,12,0,0">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,12,0,0">
+                <StackPanel>
 
                     <Border Style="{StaticResource CardBorder}">
                         <StackPanel>
                             <TextBlock Text="Hoe wil je overzetten?" FontWeight="SemiBold" Margin="0,0,0,8"/>
                             <RadioButton x:Name="ModeNetworkRadio" GroupName="Mode" Content="Rechtstreeks via het netwerk (beide pc's tegelijk aan)"
                                          IsChecked="True" Margin="0,4" Checked="ModeRadio_Changed"/>
-                            <RadioButton x:Name="ModeBackupRadio" GroupName="Mode" Content="Via een back-upbestand (USB-stick / externe schijf)"
+                            <RadioButton x:Name="ModeBackupRadio" GroupName="Mode" Content="Via een back-upmap (USB-stick / externe schijf)"
                                          Margin="0,4" Checked="ModeRadio_Changed"/>
                         </StackPanel>
                     </Border>
@@ -108,22 +109,55 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Back-upbestand-modus -->
+                    <!-- Back-upmap-modus -->
                     <Border x:Name="BackupPanel" Style="{StaticResource CardBorder}" Visibility="Collapsed">
                         <StackPanel>
-                            <TextBlock Text="Back-upbestand" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                            <TextBlock Text="Maak op de oude pc een back-upbestand en zet het op de nieuwe pc terug."
+                            <TextBlock Text="Back-up maken" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <TextBlock Text="De back-up wordt weggeschreven als gewone map (met submappen per onderdeel, bv. 'Documenten', 'Afbeeldingen'), zodat je 'm direct in Verkenner kan openen, bekijken en bewerken. Zet de map op een USB-stick/externe schijf om over te zetten."
                                        Style="{StaticResource SubtleText}"/>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                                <Button Content="Back-up maken ..." Style="{StaticResource AccentButton}"
-                                        Margin="0,0,8,0" Click="CreateBackup_Click"/>
-                                <Button Content="Back-up terugzetten ..." Style="{StaticResource SecondaryButton}"
-                                        Click="RestoreBackup_Click"/>
+                            <Button Content="Back-up maken ..." Style="{StaticResource AccentButton}"
+                                    HorizontalAlignment="Left" Margin="0,0,0,4" Click="CreateBackup_Click"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource CardBorder}">
+                        <StackPanel>
+                            <TextBlock Text="Back-up terugzetten" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <TextBlock Text="Kies een eerder gemaakte back-upmap en selecteer welke onderdelen je op deze pc wilt terugzetten."
+                                       Style="{StaticResource SubtleText}"/>
+                            <Button Content="Back-upmap kiezen ..." Style="{StaticResource SecondaryButton}"
+                                    HorizontalAlignment="Left" Margin="0,0,0,8" Click="ChooseBackupFolder_Click"/>
+                            <TextBlock x:Name="SelectedBackupFolderText" Style="{StaticResource SubtleText}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+
+                            <StackPanel x:Name="RestoreSelectionPanel" Visibility="Collapsed">
+                                <TextBlock Text="Wat wil je terugzetten?" Margin="0,4,0,4"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                    <Button Content="Alles" Style="{StaticResource SecondaryButton}"
+                                            Margin="0,0,8,0" Click="RestoreSelectAll_Click"/>
+                                    <Button Content="Niets" Style="{StaticResource SecondaryButton}"
+                                            Click="RestoreSelectNone_Click"/>
+                                </StackPanel>
+                                <Border BorderThickness="1" BorderBrush="#33FFFFFF" CornerRadius="4" Padding="8" MaxHeight="240">
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                        <ItemsControl x:Name="RestoreItemsControl">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <CheckBox Content="{Binding DisplayName}"
+                                                              IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                                              Margin="0,4"/>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </Border>
+                                <Button Content="Geselecteerde items terugzetten" Style="{StaticResource AccentButton}"
+                                        HorizontalAlignment="Left" Margin="0,12,0,0" Click="RestoreSelected_Click"/>
                             </StackPanel>
                         </StackPanel>
                     </Border>
 
                 </StackPanel>
+                </ScrollViewer>
             </TabItem>
 
             <!-- ================= TAB 3: VOORTGANG ================= -->
@@ -133,7 +167,18 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <ProgressBar x:Name="TransferProgressBar" Grid.Row="0" Minimum="0" Maximum="1" Margin="0,0,0,12"/>
+                    <Grid Grid.Row="0" Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <ProgressBar x:Name="TransferProgressBar" Grid.Column="0" Minimum="0" Maximum="1" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="ProgressPercentText" Grid.Column="1" Text="0%" Width="44"
+                                   TextAlignment="Right" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                        <Button x:Name="StopButton" Grid.Column="2" Content="Stop" Style="{StaticResource SecondaryButton}"
+                                Margin="8,0,0,0" IsEnabled="False" Click="StopButton_Click"/>
+                    </Grid>
                     <Border Grid.Row="1" Style="{StaticResource CardBorder}" Padding="0">
                         <TextBox x:Name="LogTextBox" IsReadOnly="True" BorderThickness="0"
                                  TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"

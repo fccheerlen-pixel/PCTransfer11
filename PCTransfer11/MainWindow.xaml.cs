@@ -13,6 +13,10 @@ public partial class MainWindow : Window
 {
     private readonly List<FileSelectionItem> _fileItems = new();
     private readonly List<AppProfile> _appProfiles = new();
+    private readonly List<RestoreSelectionItem> _restoreItems = new();
+
+    private string? _selectedBackupFolder;
+    private PackageManifest? _selectedBackupManifest;
 
     private readonly NetworkReceiver _networkReceiver;
     private readonly NetworkSender _networkSender = new();
@@ -22,12 +26,18 @@ public partial class MainWindow : Window
     private readonly Progress<string> _logProgress;
     private readonly Progress<double> _percentProgress;
 
+    private CancellationTokenSource? _operationCts;
+
     public MainWindow()
     {
         InitializeComponent();
 
         _logProgress = new Progress<string>(Log);
-        _percentProgress = new Progress<double>(p => TransferProgressBar.Value = p);
+        _percentProgress = new Progress<double>(p =>
+        {
+            TransferProgressBar.Value = p;
+            ProgressPercentText.Text = $"{p * 100:0}%";
+        });
         _networkReceiver = new NetworkReceiver(_logProgress);
 
         InitializeFileItems();
@@ -52,6 +62,15 @@ public partial class MainWindow : Window
 
         string downloads = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
         _fileItems.Add(new FileSelectionItem { DisplayName = "Downloads", Path = downloads });
+
+        // "Openbare" (Public) mappen: gedeelde mappen die niet aan één gebruikersaccount
+        // hangen (C:\Users\Public\...). Bestanden die iemand daar bewust in heeft gezet
+        // worden anders stilzwijgend overgeslagen.
+        _fileItems.Add(FileSelectionItem.ForSpecialFolder("Documenten (openbaar/gedeeld)", Environment.SpecialFolder.CommonDocuments));
+        _fileItems.Add(FileSelectionItem.ForSpecialFolder("Afbeeldingen (openbaar/gedeeld)", Environment.SpecialFolder.CommonPictures));
+        _fileItems.Add(FileSelectionItem.ForSpecialFolder("Video's (openbaar/gedeeld)", Environment.SpecialFolder.CommonVideos));
+        _fileItems.Add(FileSelectionItem.ForSpecialFolder("Muziek (openbaar/gedeeld)", Environment.SpecialFolder.CommonMusic));
+        _fileItems.Add(FileSelectionItem.ForSpecialFolder("Bureaublad (openbaar/gedeeld)", Environment.SpecialFolder.CommonDesktopDirectory));
 
         foreach (var item in _fileItems)
             item.IsChecked = item.Exists;
@@ -145,11 +164,11 @@ public partial class MainWindow : Window
 
     private async void StartReceive_Click(object sender, RoutedEventArgs e)
     {
-        SetBusy(true);
+        var ct = BeginOperation();
         try
         {
             string tempPackagePath = Path.Combine(Path.GetTempPath(), "PCTransfer11_ontvangen.pctbackup");
-            await _networkReceiver.ReceiveOnceAsync(tempPackagePath, _percentProgress, CancellationToken.None);
+            await _networkReceiver.ReceiveOnceAsync(tempPackagePath, _percentProgress, ct);
 
             var result = MessageBox.Show(
                 "Het pakket is ontvangen. Nu meteen terugzetten op deze pc?",
@@ -158,9 +177,13 @@ public partial class MainWindow : Window
             if (result == MessageBoxResult.Yes)
             {
                 var restorer = new PackageRestorer(_logProgress);
-                await restorer.RestoreAsync(tempPackagePath, overwriteExisting: true, CancellationToken.None);
+                await restorer.RestoreZipAsync(tempPackagePath, overwriteExisting: true, _percentProgress, ct);
                 MessageBox.Show("Terugzetten voltooid.", "PCTransfer11", MessageBoxButton.OK, MessageBoxImage.Information);
             }
+        }
+        catch (OperationCanceledException)
+        {
+            Log("Ontvangst gestopt door gebruiker.");
         }
         catch (Exception ex)
         {
@@ -170,17 +193,17 @@ public partial class MainWindow : Window
         }
         finally
         {
-            SetBusy(false);
+            EndOperation();
         }
     }
 
     private async void DiscoverReceivers_Click(object sender, RoutedEventArgs e)
     {
-        SetBusy(true);
+        var ct = BeginOperation();
         Log("Zoeken naar pc's op het netwerk ...");
         try
         {
-            var found = await NetworkSender.DiscoverAsync(2500, CancellationToken.None);
+            var found = await NetworkSender.DiscoverAsync(2500, ct);
             ReceiversComboBox.ItemsSource = found;
             if (found.Count > 0)
             {
@@ -192,9 +215,13 @@ public partial class MainWindow : Window
                 Log("Geen pc's gevonden. Controleer of de andere pc op 'Start ontvangen' staat en op hetzelfde netwerk zit.");
             }
         }
+        catch (OperationCanceledException)
+        {
+            Log("Zoeken gestopt door gebruiker.");
+        }
         finally
         {
-            SetBusy(false);
+            EndOperation();
         }
     }
 
@@ -213,16 +240,20 @@ public partial class MainWindow : Window
             return;
         }
 
-        SetBusy(true);
+        var ct = BeginOperation();
         try
         {
             string tempPackagePath = Path.Combine(Path.GetTempPath(), "PCTransfer11_te_verzenden.pctbackup");
             var builder = new PackageBuilder(_logProgress);
-            await builder.BuildAsync(GetCheckedFiles(), GetCheckedApps(), tempPackagePath, CancellationToken.None);
+            await builder.BuildToZipAsync(GetCheckedFiles(), GetCheckedApps(), tempPackagePath, ct);
 
-            await _networkSender.SendAsync(ip, port, tempPackagePath, _percentProgress, _logProgress, CancellationToken.None);
+            await _networkSender.SendAsync(ip, port, tempPackagePath, _percentProgress, _logProgress, ct);
 
             MessageBox.Show("Verzending voltooid.", "PCTransfer11", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (OperationCanceledException)
+        {
+            Log("Verzending gestopt door gebruiker.");
         }
         catch (Exception ex)
         {
@@ -232,26 +263,31 @@ public partial class MainWindow : Window
         }
         finally
         {
-            SetBusy(false);
+            EndOperation();
         }
     }
 
     private async void CreateBackup_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new SaveFileDialog
-        {
-            Title = "Back-up opslaan als",
-            Filter = "PCTransfer-back-up (*.pctbackup)|*.pctbackup",
-            FileName = $"PCTransfer_backup_{DateTime.Now:yyyyMMdd}.pctbackup"
-        };
+        var dialog = new OpenFolderDialog { Title = "Kies waar de back-upmap moet komen" };
         if (dialog.ShowDialog() != true) return;
 
-        SetBusy(true);
+        string backupFolder = Path.Combine(dialog.FolderName, $"PCTransfer_backup_{DateTime.Now:yyyyMMdd_HHmmss}");
+
+        var ct = BeginOperation();
         try
         {
             var builder = new PackageBuilder(_logProgress);
-            await builder.BuildAsync(GetCheckedFiles(), GetCheckedApps(), dialog.FileName, CancellationToken.None);
-            MessageBox.Show("Back-up gemaakt.", "PCTransfer11", MessageBoxButton.OK, MessageBoxImage.Information);
+            await builder.BuildToDirectoryAsync(GetCheckedFiles(), GetCheckedApps(), backupFolder, _percentProgress, ct);
+            MessageBox.Show(
+                $"Back-up gemaakt in:\n{backupFolder}\n\nJe kan deze map direct openen, bekijken en bewerken in Verkenner.",
+                "PCTransfer11", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (OperationCanceledException)
+        {
+            Log("Back-up gestopt door gebruiker.");
+            MessageBox.Show($"Back-up gestopt. Wat al gekopieerd was staat nog in:\n{backupFolder}",
+                "PCTransfer11", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
@@ -260,48 +296,143 @@ public partial class MainWindow : Window
         }
         finally
         {
-            SetBusy(false);
+            EndOperation();
         }
     }
 
-    private async void RestoreBackup_Click(object sender, RoutedEventArgs e)
+    // ================= TERUGZETTEN (selectief) =================
+
+    private void ChooseBackupFolder_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new OpenFileDialog
-        {
-            Title = "Back-upbestand kiezen",
-            Filter = "PCTransfer-back-up (*.pctbackup)|*.pctbackup|Alle bestanden (*.*)|*.*"
-        };
+        var dialog = new OpenFolderDialog { Title = "Kies een PCTransfer11-back-upmap" };
         if (dialog.ShowDialog() != true) return;
+
+        try
+        {
+            var manifest = PackageRestorer.LoadManifest(dialog.FolderName);
+            _selectedBackupFolder = dialog.FolderName;
+            _selectedBackupManifest = manifest;
+
+            _restoreItems.Clear();
+            foreach (var f in manifest.Files)
+                _restoreItems.Add(new RestoreSelectionItem { DisplayName = f.DisplayName, Key = f.PackagePath, IsSetting = false, IsChecked = true });
+            foreach (var s in manifest.Settings)
+                _restoreItems.Add(new RestoreSelectionItem { DisplayName = $"Instellingen: {s.DisplayName}", Key = s.AppId, IsSetting = true, IsChecked = true });
+
+            RestoreItemsControl.ItemsSource = null;
+            RestoreItemsControl.ItemsSource = _restoreItems;
+            RestoreSelectionPanel.Visibility = Visibility.Visible;
+            SelectedBackupFolderText.Text = $"Gekozen back-up: {dialog.FolderName} ({manifest.CreatedAtUtc:g} UTC, van '{manifest.CreatedByMachine}')";
+            Log($"Back-upmap ingelezen: {dialog.FolderName} ({_restoreItems.Count} items gevonden).");
+        }
+        catch (Exception ex)
+        {
+            RestoreSelectionPanel.Visibility = Visibility.Collapsed;
+            _selectedBackupFolder = null;
+            _selectedBackupManifest = null;
+            MessageBox.Show($"Kon deze map niet als PCTransfer11-back-up inlezen:\n{ex.Message}", "PCTransfer11",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void RestoreSelectAll_Click(object sender, RoutedEventArgs e) => SetAllRestoreChecks(true);
+    private void RestoreSelectNone_Click(object sender, RoutedEventArgs e) => SetAllRestoreChecks(false);
+
+    private void SetAllRestoreChecks(bool value)
+    {
+        foreach (var item in _restoreItems)
+            item.IsChecked = value;
+        RestoreItemsControl.ItemsSource = null;
+        RestoreItemsControl.ItemsSource = _restoreItems;
+    }
+
+    private async void RestoreSelected_Click(object sender, RoutedEventArgs e)
+    {
+        if (_selectedBackupFolder == null || _selectedBackupManifest == null)
+        {
+            MessageBox.Show("Kies eerst een back-upmap.", "PCTransfer11", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var checkedFilePaths = _restoreItems.Where(i => !i.IsSetting && i.IsChecked).Select(i => i.Key).ToHashSet();
+        var checkedAppIds = _restoreItems.Where(i => i.IsSetting && i.IsChecked).Select(i => i.Key).ToHashSet();
+
+        if (checkedFilePaths.Count == 0 && checkedAppIds.Count == 0)
+        {
+            MessageBox.Show("Vink minstens één item aan om terug te zetten.", "PCTransfer11", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
 
         var confirm = MessageBox.Show(
             "Bestaande bestanden met dezelfde naam worden overschreven. Doorgaan?",
             "PCTransfer11", MessageBoxButton.YesNo, MessageBoxImage.Question);
         if (confirm != MessageBoxResult.Yes) return;
 
-        SetBusy(true);
+        var ct = BeginOperation();
         try
         {
             var restorer = new PackageRestorer(_logProgress);
-            await restorer.RestoreAsync(dialog.FileName, overwriteExisting: true, CancellationToken.None);
+            await restorer.RestoreFromFolderAsync(
+                _selectedBackupFolder, _selectedBackupManifest,
+                checkedFilePaths, checkedAppIds,
+                overwriteExisting: true, _percentProgress, ct);
             MessageBox.Show("Terugzetten voltooid.", "PCTransfer11", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (OperationCanceledException)
+        {
+            Log("Terugzetten gestopt door gebruiker.");
         }
         catch (Exception ex)
         {
             Log($"Fout tijdens terugzetten: {ex.Message}");
-            MessageBox.Show($"Er ging iets mis:\n{ex.Message}", "PCTransfer11", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"Er ging iets mis tijdens het terugzetten:\n{ex.Message}", "PCTransfer11",
+                MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
-            SetBusy(false);
+            EndOperation();
         }
     }
 
     private IEnumerable<FileSelectionItem> GetCheckedFiles() => _fileItems.Where(f => f.IsChecked && f.Exists);
     private IEnumerable<AppProfile> GetCheckedApps() => _appProfiles.Where(a => a.IsChecked && a.IsAvailable);
 
+    /// <summary>
+    /// Start een nieuwe annuleerbare operatie: maakt een verse CancellationTokenSource,
+    /// schakelt de Stop-knop in en reset de voortgangsbalk. Geef het geretourneerde
+    /// token mee aan de service-aanroep in plaats van CancellationToken.None.
+    /// </summary>
+    private CancellationToken BeginOperation()
+    {
+        _operationCts?.Dispose();
+        _operationCts = new CancellationTokenSource();
+        SetBusy(true);
+        return _operationCts.Token;
+    }
+
+    private void EndOperation()
+    {
+        SetBusy(false);
+        _operationCts?.Dispose();
+        _operationCts = null;
+    }
+
+    private void StopButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_operationCts == null || _operationCts.IsCancellationRequested) return;
+        Log("Bezig met stoppen ... (kan even duren tot het huidige bestand klaar is)");
+        StopButton.IsEnabled = false;
+        _operationCts.Cancel();
+    }
+
     private void SetBusy(bool busy)
     {
         Cursor = busy ? System.Windows.Input.Cursors.Wait : System.Windows.Input.Cursors.Arrow;
-        if (busy) TransferProgressBar.Value = 0;
+        StopButton.IsEnabled = busy;
+        if (busy)
+        {
+            TransferProgressBar.Value = 0;
+            ProgressPercentText.Text = "0%";
+        }
     }
 }

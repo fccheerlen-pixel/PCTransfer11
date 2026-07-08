@@ -30,20 +30,61 @@ verder — dat hebben we bij de Delphi/Lazarus-versie ook zo gedaan).
 ## Wat het doet
 
 - **Tab 1 – Selecteren**: vink mappen aan (Documenten, Afbeeldingen,
-  Bureaublad, Video's, Muziek, Downloads, of voeg zelf een map toe) en/of
-  instellingen van bekende apps (Chrome, Edge, Firefox, VS Code, Windows
-  Terminal, bureaubladachtergrond). Alleen wat op déze pc daadwerkelijk
-  gevonden is, is aan te vinken.
+  Bureaublad, Video's, Muziek, Downloads - elk zowel de eigen als de
+  openbare/gedeelde "Public"-variant - of voeg zelf een map toe) en/of
+  instellingen/gegevens van bekende apps: Chrome, Edge, Opera, Firefox,
+  Internet Explorer/Edge-favorieten, Thunderbird, Outlook (.pst/.ost),
+  Skype, VS Code, Windows Terminal, qBittorrent, AIMP, iTunes en de
+  bureaubladachtergrond. Alleen wat op déze pc daadwerkelijk gevonden is,
+  is aan te vinken.
 - **Tab 2 – Overzetten**, twee modi:
   - **Netwerk**: de ontvangende pc klikt op "Start ontvangen" en luistert;
     de zendende pc klikt op "Zoek pc's op het netwerk" (automatische
     detectie via UDP-broadcast) of vult handmatig een IP-adres in, en klikt
     op "Start verzenden". Werkt alleen als beide pc's op hetzelfde
-    (Wifi-)netwerk zitten.
-  - **Back-upbestand**: maakt één `.pctbackup`-bestand (een zip met een
-    manifest) dat je op een USB-stick/externe schijf zet en op de nieuwe pc
-    weer inleest.
-- **Tab 3 – Voortgang**: voortgangsbalk en logboek.
+    (Wifi-)netwerk zitten. Achter de schermen wordt de back-up hiervoor
+    tijdelijk ingepakt tot één zip-bestand voor de overdracht.
+  - **Back-upmap**: maakt een **gewone map** (geen zip) met een submap per
+    geselecteerd onderdeel (bv. `Documenten`, `Afbeeldingen`) plus een
+    `manifest.json` en een `_instellingen`-map. Omdat het gewone mappen en
+    bestanden zijn, kan je de back-up direct in Verkenner openen, bekijken
+    en zelfs bewerken voordat je 'm terugzet. Zet de map op een USB-stick of
+    externe schijf om naar de nieuwe pc over te brengen.
+  - **Terugzetten**: kies op de nieuwe pc de back-upmap via "Back-upmap
+    kiezen ...". De app leest het manifest in en toont een aanvinklijst van
+    alles wat er in de back-up zit (elke map en elke app-instelling apart),
+    zodat je bijvoorbeeld alleen "Afbeeldingen" of alleen "Documenten" kan
+    terugzetten in plaats van alles.
+- **Tab 3 – Voortgang**: voortgangsbalk met percentage, een **Stop-knop**
+  (annuleert de lopende back-up/overdracht/terugzetactie op een moment dat
+  veilig is - wat al gekopieerd was blijft gewoon staan) en een logboek.
+
+## Nieuw: voortgang, annuleren, cloudbestanden en crashrapport
+
+- **Echt percentage in plaats van "bezig"**: vóórdat er iets gekopieerd
+  wordt, telt de app eerst de totale hoeveelheid data (pre-scan), zodat de
+  voortgangsbalk en het percentage kloppen in plaats van alleen per-item te
+  springen.
+- **Stop-knop**: elke lange actie (back-up maken, terugzetten, netwerk
+  verzenden/ontvangen) is nu annuleerbaar. Kopiëren gebeurt in blokken van
+  1 MB met een cancellation-check per blok, dus de Stop-knop reageert ook
+  meteen tijdens het kopiëren van een groot bestand (bv. een video van
+  enkele GB's) in plaats van pas nadat dat ene bestand klaar is.
+- **Cloud-only bestanden (OneDrive e.d.) worden gedetecteerd en
+  overgeslagen** in plaats van geprobeerd te downloaden. Dit was de meest
+  waarschijnlijke oorzaak van het "soms vastlopen" tijdens een back-up: een
+  bestand dat alleen online staat, forceert bij het lezen een download die
+  bij een grote video of trage verbinding minutenlang kan duren zonder dat
+  er iets in de UI gebeurt. De app meldt in het logboek hoeveel van
+  dit soort bestanden zijn overgeslagen.
+- **Crashrapport**: als de app toch onverwacht crasht (bv. tijdens het
+  opstarten, of ergens anders), verschijnt er nu een venster met de
+  volledige foutmelding + stack trace in een selecteerbaar tekstvak, plus
+  een "Kopiëren"-knop. Het rapport wordt ook automatisch weggeschreven naar
+  `%LOCALAPPDATA%\PCTransfer11\crashes\`, zodat er sowieso een bestand is
+  om door te sturen, ook als het venster per ongeluk wordt weggeklikt.
+- **Eigen pictogram** voor de gebouwde `.exe` (was voorheen het standaard
+  .NET-icoontje).
 
 ## Belangrijke kanttekeningen
 
@@ -85,10 +126,11 @@ PCTransfer11/
     AppProfile.cs              - een bekende applicatie (Chrome, VS Code, ...)
     PackageManifest.cs         - manifest.json-structuur in elk pakket
     DiscoveredReceiver.cs      - via UDP gevonden ontvanger
+    RestoreSelectionItem.cs     - aan te vinken item op het terugzet-scherm
   Services/
     KnownApps.cs                - de vooraf gedefinieerde app-lijst
-    PackageBuilder.cs           - bouwt een .pctbackup-pakket (zip)
-    PackageRestorer.cs          - pakt een pakket uit en zet het terug
+    PackageBuilder.cs           - bouwt een back-up (map, of tijdelijk gezipt voor het netwerk)
+    PackageRestorer.cs          - leest een back-up in en zet (een selectie) terug
     NetworkReceiver.cs          - TCP-ontvangst + UDP-discovery-antwoord
     NetworkSender.cs            - UDP-discovery + TCP-verzending
 ```

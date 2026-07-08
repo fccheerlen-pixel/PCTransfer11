@@ -16,7 +16,7 @@ public sealed class PackageManifest
 
     public sealed class FileEntry
     {
-        /// <summary>Relatief pad binnen de map "files" van het pakket.</summary>
+        /// <summary>Relatieve mapnaam van dit item binnen de back-up (bv. "Documenten").</summary>
         public string PackagePath { get; set; } = "";
         /// <summary>Absoluut oorspronkelijk pad op de bronmachine (voor herstel op dezelfde gebruikersmap-structuur).</summary>
         public string OriginalPath { get; set; } = "";
