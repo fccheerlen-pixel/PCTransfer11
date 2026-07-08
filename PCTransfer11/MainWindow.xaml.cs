@@ -1,8 +1,11 @@
+using System.ComponentModel;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using Microsoft.Win32;
 using PCTransfer11.Models;
 using PCTransfer11.Services;
@@ -44,10 +47,17 @@ public partial class MainWindow : Window
         InitializeAppProfiles();
 
         FilesItemsControl.ItemsSource = _fileItems;
-        AppsItemsControl.ItemsSource = _appProfiles;
+
+        var appsView = (ListCollectionView)CollectionViewSource.GetDefaultView(_appProfiles);
+        appsView.GroupDescriptions.Clear();
+        appsView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(AppProfile.Category)));
+        appsView.CustomSort = Comparer<AppProfile>.Create((a, b) =>
+            string.Compare(a.Category, b.Category, StringComparison.OrdinalIgnoreCase));
+        AppsItemsControl.ItemsSource = appsView;
 
         UpdateReceiverInfoText();
         StartDiscoveryResponderIfReceiver();
+        InitializeAboutTab();
 
         Closing += (_, _) => _discoveryResponderCts?.Cancel();
     }
@@ -76,6 +86,24 @@ public partial class MainWindow : Window
         _appProfiles.AddRange(KnownApps.GetAll());
         foreach (var app in _appProfiles)
             app.IsChecked = app.IsAvailable;
+    }
+
+    private void InitializeAboutTab()
+    {
+        var version = Assembly.GetExecutingAssembly().GetName().Version;
+        AboutVersionText.Text = version != null
+            ? $"Versie {version.Major}.{version.Minor}.{version.Build}"
+            : "Versie onbekend";
+    }
+
+    private void AppsSelectAll_Click(object sender, RoutedEventArgs e) => SetAllAppChecks(true);
+    private void AppsSelectNone_Click(object sender, RoutedEventArgs e) => SetAllAppChecks(false);
+
+    private void SetAllAppChecks(bool value)
+    {
+        foreach (var app in _appProfiles.Where(a => a.IsAvailable))
+            app.IsChecked = value;
+        CollectionViewSource.GetDefaultView(_appProfiles).Refresh();
     }
 
     private void Log(string message)

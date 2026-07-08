@@ -29,8 +29,11 @@ public sealed class PackageManifest
         public string DisplayName { get; set; } = "";
         /// <summary>Relatief pad binnen "settings/{AppId}/data", of null als er geen datamap is.</summary>
         public bool HasDataFolder { get; set; }
-        /// <summary>Of er een registry.reg-bestand is meegepakt.</summary>
+        /// <summary>Of er minstens één registry_*.reg-bestand is meegepakt.</summary>
         public bool HasRegistryExport { get; set; }
+        /// <summary>Beschrijving van de meegenomen registersleutel(s), alleen informatief.</summary>
         public string? RegistryKey { get; set; }
+        /// <summary>Of dit onderdeel via aangepaste export/import-logica is gemaakt (bv. Wifi-profielen).</summary>
+        public bool HasCustomData { get; set; }
     }
 }

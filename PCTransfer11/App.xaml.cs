@@ -10,6 +10,16 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        // Als dit een kortstondige, onzichtbare "als administrator"-herlancering
+        // is (voor netwerkadapter-/Wifi-instellingen, zie ElevatedNetworkHelper),
+        // dan wordt hier alleen dat ene commando uitgevoerd en meteen afgesloten -
+        // er wordt nooit een venster getoond voor deze modus.
+        if (ElevatedNetworkHelper.TryHandleElevatedArgs(e.Args))
+        {
+            Shutdown(0);
+            return;
+        }
+
         // Globale vangnetten zo vroeg mogelijk registreren, VOORDAT het
         // hoofdvenster wordt aangemaakt - dit was eerder het probleem: als
         // MainWindow (via StartupUri) een fout gooit tijdens het opstarten

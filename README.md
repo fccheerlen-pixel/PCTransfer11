@@ -1,9 +1,9 @@
 # PCTransfer11 (C#/.NET, Windows 11)
 
-Een eigen versie van IObit PCtransfer: zet bestanden en een selectie
-programma-instellingen over naar een andere Windows-pc, via het netwerk
-of via een back-upbestand. Gebouwd met WPF (.NET 8) in een Windows
-11-achtige stijl.
+Een eigen versie van IObit PCtransfer, door **Darkerst Inc.**: zet bestanden,
+programma-instellingen én persoonlijke Windows-instellingen over naar een
+andere Windows-pc, via het netwerk of via een back-upbestand. Gebouwd met
+WPF (.NET 8) in een Windows 11-achtige stijl.
 
 **Ook dit project is hier niet gecompileerd of getest** — deze omgeving heeft
 geen .NET SDK en geen Windows/internettoegang. De code volgt standaard,
@@ -27,17 +27,83 @@ verder — dat hebben we bij de Delphi/Lazarus-versie ook zo gedaan).
    ingebouwde .NET/WPF-bibliotheken, dus `dotnet build` werkt zonder
    afhankelijkheden op te halen (op de .NET SDK zelf na).
 
+### Portable versie
+
+```
+dotnet publish PCTransfer11/PCTransfer11.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o publish
+```
+
+Het resultaat in `publish/` is één zelfstandige `.exe` — kopieer die map
+(of zip 'm) naar een USB-stick en start 'm direct op, zonder installatie.
+
+### Installer (setup.exe)
+
+Naast de portable versie is er ook een échte installer, gebouwd met
+[Inno Setup](https://jrsoftware.org/isinfo.php) (gratis):
+
+1. Publiceer eerst de portable versie zoals hierboven (de installer bouwt
+   voort op de `publish`-map).
+2. Installeer Inno Setup.
+3. Open `installer/setup.iss` in Inno Setup en klik op **Compile**, of via
+   de command line:
+   ```
+   "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\setup.iss
+   ```
+4. Het resultaat staat in `installer/Output/PCTransfer11-Setup.exe` — een
+   normale Windows-installer met Start-menu-snelkoppeling, optionele
+   bureaubladsnelkoppeling en een nette "Programma's verwijderen"-ingang.
+   De portable versie blijft gewoon apart bruikbaar; de installer is een
+   toevoeging, geen vervanging.
+
+### Automatisch bouwen via GitHub Actions
+
+Bij elke push naar `main` bouwt de workflow in `.github/workflows/build.yml`
+automatisch **drie** artefacten (zichtbaar onder het tabblad "Actions" van
+de run):
+- `PCTransfer11-portable` — de portable versie als `.zip`
+- `PCTransfer11-windows` — dezelfde portable versie als losse map
+- `PCTransfer11-installer` — `PCTransfer11-Setup.exe`
+
 ## Wat het doet
 
-- **Tab 1 – Selecteren**: vink mappen aan (Documenten, Afbeeldingen,
-  Bureaublad, Video's, Muziek, Downloads - alleen van het eigen
-  gebruikersprofiel, niet van het openbare/gedeelde "Public"-profiel -
-  of voeg zelf een map toe) en/of
-  instellingen/gegevens van bekende apps: Chrome, Edge, Opera, Firefox,
-  Internet Explorer/Edge-favorieten, Thunderbird, Outlook (.pst/.ost),
-  Skype, VS Code, Windows Terminal, qBittorrent, AIMP, iTunes en de
-  bureaubladachtergrond. Alleen wat op déze pc daadwerkelijk gevonden is,
-  is aan te vinken.
+- **Tab 1 – Selecteren** (nu in twee kolommen naast elkaar, zodat alles in
+  één oogopslag te zien is):
+  - **Links – Bestanden en mappen**: Documenten, Afbeeldingen, Bureaublad,
+    Video's, Muziek, Downloads - alleen van het eigen gebruikersprofiel,
+    niet van het openbare/gedeelde "Public"-profiel - of voeg zelf een map
+    toe.
+  - **Rechts – Programma- en Windows-instellingen**, gegroepeerd per
+    categorie (met "Alles"/"Niets"-knoppen):
+    - **Browsers**: Chrome, Edge, Opera, Firefox, Internet Explorer/Edge-
+      favorieten.
+    - **Communicatie & e-mail**: Thunderbird, Outlook (.pst/.ost), Skype.
+    - **Multimedia & downloads**: qBittorrent, AIMP, iTunes.
+    - **Ontwikkeltools**: VS Code, Windows Terminal.
+    - **Windows-instellingen**: bureaubladachtergrond/kleuren/thema,
+      Verkenner- en taakbalk-weergave, muis/toetsenbord, taal- en
+      regio-instellingen, geluidsschema — allemaal via je eigen
+      `HKEY_CURRENT_USER`-registerdeel, zodat er geen adminrechten nodig
+      zijn en er nooit in het systeembrede register wordt geschreven.
+    - **Netwerk**:
+      - Proxy-instelling (`Instellingen > Netwerk en internet > Proxy`) —
+        via het register, geen adminrechten nodig.
+      - Gekoppelde netwerkschijven (welke letter naar welk pad wijst) —
+        via het register, geen adminrechten nodig. De bijbehorende
+        inloggegevens staan in Windows Credential Manager en gaan nooit
+        mee; je vult die na het terugzetten eenmalig opnieuw in.
+      - **Netwerkadapter** (vast IP-adres, DNS-servers, gateway) en de
+        **systeembrede proxy** — vereist adminrechten: Windows toont zowel
+        bij het maken als bij het terugzetten van de back-up een
+        UAC-bevestigingsvenster. Weiger je die, dan wordt dit onderdeel
+        overgeslagen.
+      - **Wifi-netwerken** (SSID's + wachtwoorden) — vraagt eveneens om een
+        UAC-bevestiging, omdat Windows wachtwoorden alleen in klare tekst
+        vrijgeeft aan een administratorproces. Weiger je de UAC-prompt, dan
+        valt de app automatisch terug op een versie zonder wachtwoord (dat
+        lukt wél zonder adminrechten) - je vult het wachtwoord dan zelf
+        eenmalig in op de nieuwe pc.
+
+    Alleen wat op déze pc daadwerkelijk gevonden is, is aan te vinken.
 - **Tab 2 – Overzetten**, twee modi:
   - **Netwerk**: de ontvangende pc klikt op "Start ontvangen" en luistert;
     de zendende pc klikt op "Zoek pc's op het netwerk" (automatische
@@ -59,6 +125,8 @@ verder — dat hebben we bij de Delphi/Lazarus-versie ook zo gedaan).
 - **Tab 3 – Voortgang**: voortgangsbalk met percentage, een **Stop-knop**
   (annuleert de lopende back-up/overdracht/terugzetactie op een moment dat
   veilig is - wat al gekopieerd was blijft gewoon staan) en een logboek.
+- **Tab "Over"**: naam, versie en eigenaar van de software (**Darkerst
+  Inc.**).
 
 ## Nieuw: voortgang, annuleren, cloudbestanden en crashrapport
 
@@ -97,12 +165,30 @@ verder — dat hebben we bij de Delphi/Lazarus-versie ook zo gedaan).
   DPAPI versleuteld aan het Windows-gebruikersaccount van de bronmachine
   gekoppeld en zijn op een andere pc/account toch onbruikbaar — daarom neemt
   dit programma ze bewust niet mee.
-- **"Instellingen" is bewust beperkt** tot een kleine, veilige set: de
-  AppData-map van een paar bekende apps, plus (optioneel) één
-  `HKEY_CURRENT_USER`-registersleutel voor de bureaubladachtergrond. Er wordt
-  **niet** geprobeerd het hele Windows-register of alle geïnstalleerde
-  programma's over te zetten — dat is fragiel en kan een systeem juist
-  beschadigen als het tussen verschillende Windows-versies/pc's gebeurt.
+- **"Instellingen" is bewust beperkt** tot een vaste, veilige set: de
+  AppData-map van een paar bekende apps, plus een aantal losse
+  `HKEY_CURRENT_USER`-registersleutels voor persoonlijke Windows-voorkeuren
+  (bureaubladachtergrond, Verkenner/taakbalk, muis/toetsenbord, taal/regio,
+  geluidsschema, netwerkschijven, proxy) en de netwerkadapter/Wifi-
+  onderdelen hieronder. Er wordt **niet** geprobeerd het hele Windows-
+  register over te zetten of alle geïnstalleerde programma's mee te nemen —
+  dat is fragiel en kan een systeem juist beschadigen als het tussen
+  verschillende Windows-versies/pc's gebeurt.
+- **Netwerkadapter en Wifi-wachtwoorden vragen om adminrechten (UAC).**
+  Dit zijn de **enige twee** onderdelen van de hele app die dat doen — al
+  het andere (inclusief de rest van "Netwerk") werkt bewust zonder. Vink je
+  "Netwerkadapter" of "Wifi-netwerken" aan, dan toont Windows bij het
+  starten van de back-up/terugzetactie een UAC-bevestigingsvenster (de app
+  herlanceert zichzelf daarvoor heel even, onzichtbaar, alleen voor dat ene
+  commando - de rest van de app blijft gewoon zonder adminrechten draaien).
+  Weiger je die prompt, dan wordt het adapter-onderdeel overgeslagen en valt
+  Wifi automatisch terug op een versie zonder wachtwoord.
+- **Wachtwoorden gaan verder nooit mee.** Opgeslagen browserwachtwoorden en
+  inloggegevens van netwerkschijven (Credential Manager) zijn met DPAPI
+  versleuteld aan het Windows-gebruikersaccount van de bronmachine
+  gekoppeld en zijn op een andere pc/account toch onbruikbaar — daarom
+  neemt dit programma ze bewust niet mee (Wifi-wachtwoorden zijn hierop de
+  uitzondering, want die zijn wél gewoon overdraagbaar).
 - **Firewall-prompt.** De eerste keer dat je op "Start ontvangen" klikt, kan
   Windows Defender Firewall vragen of de app netwerktoegang mag hebben — klik
   op "Toegang toestaan", anders werkt de netwerkmodus niet.
@@ -110,13 +196,17 @@ verder — dat hebben we bij de Delphi/Lazarus-versie ook zo gedaan).
   kopiëren van diens instellingenmap) worden overgeslagen in plaats van de
   hele overdracht te laten mislukken — sluit browsers/apps dus liever eerst
   af voor een volledige overdracht.
-- Draait bewust **zonder** adminrechten (`asInvoker` in het manifest) — alle
-  bewerkingen blijven binnen de gebruikersmappen en `HKEY_CURRENT_USER`.
+- Draait **standaard zonder** adminrechten (`asInvoker` in het manifest) —
+  op de twee hierboven genoemde uitzonderingen na blijven alle bewerkingen
+  binnen de gebruikersmappen en `HKEY_CURRENT_USER`.
 
 ## Projectstructuur
 
 ```
 PCTransfer11.sln
+installer/
+  setup.iss                    - Inno Setup-script voor de setup.exe
+.github/workflows/build.yml    - bouwt portable zip + installer op elke push
 PCTransfer11/
   PCTransfer11.csproj
   app.manifest
@@ -124,21 +214,26 @@ PCTransfer11/
   MainWindow.xaml(.cs)
   Models/
     FileSelectionItem.cs      - een aan te vinken map/bestand
-    AppProfile.cs              - een bekende applicatie (Chrome, VS Code, ...)
+    AppProfile.cs              - een bekende applicatie of Windows-instelling
     PackageManifest.cs         - manifest.json-structuur in elk pakket
     DiscoveredReceiver.cs      - via UDP gevonden ontvanger
     RestoreSelectionItem.cs     - aan te vinken item op het terugzet-scherm
   Services/
-    KnownApps.cs                - de vooraf gedefinieerde app-lijst
+    KnownApps.cs                - de vooraf gedefinieerde app-/instellingenlijst, per categorie
     PackageBuilder.cs           - bouwt een back-up (map, of tijdelijk gezipt voor het netwerk)
     PackageRestorer.cs          - leest een back-up in en zet (een selectie) terug
     NetworkReceiver.cs          - TCP-ontvangst + UDP-discovery-antwoord
     NetworkSender.cs            - UDP-discovery + TCP-verzending
+    NetworkSettingsExporter.cs  - Wifi-profielen exporteren/importeren via netsh (zonder adminrechten)
+    ElevatedNetworkHelper.cs    - vraagt eenmalig adminrechten (UAC) voor netwerkadapter/Wifi-wachtwoorden
 ```
 
 ## Uitbreiden
 
-Wil je een extra applicatie toevoegen aan de instellingen-lijst? Voeg een
-nieuw `AppProfile`-object toe in `Services/KnownApps.cs` — je hoeft verder
-nergens iets aan te passen, de UI en het pakketformaat pakken het automatisch
-op.
+Wil je een extra applicatie of Windows-instelling toevoegen aan de
+instellingenlijst? Voeg een nieuw `AppProfile`-object toe in
+`Services/KnownApps.cs` met een `Category` (voor de groepskop in de UI) en
+óf een `ResolveDataFolder`, óf één of meer `RegistryKeys`
+(`HKEY_CURRENT_USER`-sleutels), óf een `CustomExport`/`CustomImport`-paar
+voor iets bijzonders (zoals de Wifi-export) — je hoeft verder nergens iets
+aan te passen, de UI en het pakketformaat pakken het automatisch op.

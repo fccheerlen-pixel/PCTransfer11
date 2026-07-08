@@ -1,9 +1,12 @@
+using System.Threading;
+using System.Threading.Tasks;
+
 namespace PCTransfer11.Models;
 
 /// <summary>
 /// Beschrijft waar de instellingen/gegevens van een bekende applicatie
-/// op schijf (en eventueel in het register) staan, zodat PCTransfer11
-/// ze kan meenemen in een pakket.
+/// (of Windows-instelling) op schijf en/of in het register staan, zodat
+/// PCTransfer11 ze kan meenemen in een pakket.
 /// </summary>
 public sealed class AppProfile
 {
@@ -12,6 +15,12 @@ public sealed class AppProfile
 
     /// <summary>Naam zoals getoond in de UI.</summary>
     public required string DisplayName { get; init; }
+
+    /// <summary>
+    /// Categorie waaronder dit item wordt getoond/gegroepeerd in de UI
+    /// (bv. "Browsers", "Windows-instellingen", "Netwerk").
+    /// </summary>
+    public string Category { get; init; } = "Overig";
 
     /// <summary>Of dit item standaard aangevinkt staat.</summary>
     public bool IsChecked { get; set; }
@@ -23,11 +32,23 @@ public sealed class AppProfile
     public required Func<string?> ResolveDataFolder { get; init; }
 
     /// <summary>
-    /// Optioneel: een HKEY_CURRENT_USER-registersleutel (volledig pad, bv.
-    /// "HKEY_CURRENT_USER\Software\Microsoft\Notepad") die wordt
-    /// geëxporteerd/geïmporteerd via het ingebouwde reg.exe.
+    /// Optioneel: één of meerdere HKEY_CURRENT_USER-registersleutels (volledig
+    /// pad, bv. "HKEY_CURRENT_USER\Control Panel\Desktop") die elk apart
+    /// worden geëxporteerd/geïmporteerd via het ingebouwde reg.exe. Bewust
+    /// alleen HKCU: dat vereist geen adminrechten en raakt nooit
+    /// systeembrede/andere-gebruikers-instellingen.
     /// </summary>
-    public string? RegistryKey { get; init; }
+    public string[]? RegistryKeys { get; init; }
+
+    /// <summary>
+    /// Optioneel: aangepaste exportlogica voor onderdelen die niet gewoon
+    /// een bestaande map of registersleutel zijn (bv. Wifi-profielen via
+    /// netsh). Krijgt de doelmap mee en levert true op bij succes.
+    /// </summary>
+    public Func<string, CancellationToken, IProgress<string>, Task<bool>>? CustomExport { get; init; }
+
+    /// <summary>Bijbehorende aangepaste terugzet-logica voor <see cref="CustomExport"/>.</summary>
+    public Func<string, CancellationToken, IProgress<string>, Task>? CustomImport { get; init; }
 
     /// <summary>Korte toelichting, getoond als tooltip.</summary>
     public string? Note { get; init; }
@@ -37,5 +58,7 @@ public sealed class AppProfile
     /// aangevinkt kan worden. Wordt door de UI gebruikt om niet-gevonden
     /// items uit te grijzen.
     /// </summary>
-    public bool IsAvailable => ResolveDataFolder() != null || RegistryKey != null;
+    public bool IsAvailable => ResolveDataFolder() != null
+                               || (RegistryKeys?.Length ?? 0) > 0
+                               || CustomExport != null;
 }

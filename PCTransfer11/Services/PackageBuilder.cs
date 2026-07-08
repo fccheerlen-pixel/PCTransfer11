@@ -144,8 +144,10 @@ public sealed class PackageBuilder
             {
                 AppId = app.Id,
                 DisplayName = app.DisplayName,
-                RegistryKey = app.RegistryKey
+                RegistryKey = app.RegistryKeys != null ? string.Join("; ", app.RegistryKeys) : null
             };
+
+            bool hasAnySource = false;
 
             string? dataFolder = app.ResolveDataFolder();
             if (dataFolder != null && Directory.Exists(dataFolder))
@@ -155,24 +157,42 @@ public sealed class PackageBuilder
                 string dataDestination = Path.Combine(appStagingDir, "data");
                 await CopyDirectoryAsync(dataFolder, dataDestination, tracker, ct);
                 entry.HasDataFolder = true;
+                hasAnySource = true;
             }
-            else if (dataFolder == null && app.RegistryKey == null)
+
+            if (app.RegistryKeys is { Length: > 0 })
+            {
+                _log.Report($"Registerinstellingen exporteren: {app.DisplayName} ...");
+                Directory.CreateDirectory(appStagingDir);
+                bool anyOk = false;
+                for (int i = 0; i < app.RegistryKeys.Length; i++)
+                {
+                    string regFile = Path.Combine(appStagingDir, $"registry_{i}.reg");
+                    if (await ExportRegistryKeyAsync(app.RegistryKeys[i], regFile, ct))
+                        anyOk = true;
+                }
+                entry.HasRegistryExport = anyOk;
+                hasAnySource = hasAnySource || anyOk;
+            }
+
+            if (app.CustomExport != null)
+            {
+                _log.Report($"Instellingen ophalen: {app.DisplayName} ...");
+                Directory.CreateDirectory(appStagingDir);
+                string customDestination = Path.Combine(appStagingDir, "data");
+                bool ok = await app.CustomExport(customDestination, ct, _log);
+                entry.HasCustomData = ok;
+                entry.HasDataFolder = entry.HasDataFolder || ok; // hergebruikt hetzelfde "data"-pad bij terugzetten
+                hasAnySource = hasAnySource || ok;
+            }
+
+            if (!hasAnySource)
             {
                 _log.Report($"Overslaan (niet gevonden op dit systeem): {app.DisplayName}");
                 continue;
             }
 
-            if (app.RegistryKey != null)
-            {
-                _log.Report($"Registerinstellingen exporteren: {app.DisplayName} ...");
-                Directory.CreateDirectory(appStagingDir);
-                string regFile = Path.Combine(appStagingDir, "registry.reg");
-                bool ok = await ExportRegistryKeyAsync(app.RegistryKey, regFile, ct);
-                entry.HasRegistryExport = ok;
-            }
-
-            if (entry.HasDataFolder || entry.HasRegistryExport)
-                manifest.Settings.Add(entry);
+            manifest.Settings.Add(entry);
         }
 
         string manifestPath = Path.Combine(outputDirectory, "manifest.json");

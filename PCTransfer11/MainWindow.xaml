@@ -1,7 +1,7 @@
 <Window x:Class="PCTransfer11.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="PCTransfer11" Height="640" Width="820"
+        Title="PCTransfer11" Height="800" Width="1180" MinHeight="600" MinWidth="900"
         WindowStartupLocation="CenterScreen">
     <Grid Margin="20">
         <Grid.RowDefinitions>
@@ -19,12 +19,20 @@
 
             <!-- ================= TAB 1: SELECTEREN ================= -->
             <TabItem Header="1. Selecteren">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,12,0,0">
-                    <StackPanel>
+                <Grid Margin="0,12,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="16"/>
+                        <ColumnDefinition Width="1.3*"/>
+                    </Grid.ColumnDefinitions>
 
+                    <!-- Linkerkolom: bestanden en mappen -->
+                    <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
                         <Border Style="{StaticResource CardBorder}">
                             <StackPanel>
                                 <TextBlock Text="Bestanden en mappen" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                <TextBlock Style="{StaticResource SubtleText}"
+                                           Text="Alleen van je eigen gebruikersaccount - niet van het openbare/gedeelde Windows-profiel."/>
                                 <ItemsControl x:Name="FilesItemsControl">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
@@ -40,29 +48,54 @@
                                         HorizontalAlignment="Left" Margin="0,8,0,0" Click="AddCustomFolder_Click"/>
                             </StackPanel>
                         </Border>
+                    </ScrollViewer>
 
+                    <!-- Rechterkolom: programma- en Windows-instellingen, gegroepeerd -->
+                    <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
                         <Border Style="{StaticResource CardBorder}">
                             <StackPanel>
-                                <TextBlock Text="Programma-instellingen" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Programma- en Windows-instellingen" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Button Content="Alles" Style="{StaticResource SecondaryButton}" Padding="10,4"
+                                                Margin="0,0,6,0" Click="AppsSelectAll_Click"/>
+                                        <Button Content="Niets" Style="{StaticResource SecondaryButton}" Padding="10,4"
+                                                Click="AppsSelectNone_Click"/>
+                                    </StackPanel>
+                                </Grid>
                                 <TextBlock Style="{StaticResource SubtleText}"
-                                           Text="Alleen applicaties die op dit systeem gevonden zijn kunnen worden aangevinkt. Wachtwoorden die in browsers zijn opgeslagen gaan nooit mee (die zijn versleuteld aan dit Windows-account gekoppeld)."/>
+                                           Text="Alleen items die op dit systeem gevonden zijn kunnen worden aangevinkt. Wachtwoorden die in browsers zijn opgeslagen gaan nooit mee (die zijn versleuteld aan dit Windows-account gekoppeld). Windows-instellingen gaan alleen via je eigen gebruikersaccount (HKEY_CURRENT_USER) - er wordt nooit het volledige register gebackupt."/>
                                 <ItemsControl x:Name="AppsItemsControl">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
                                             <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}"
                                                       IsEnabled="{Binding IsAvailable}"
                                                       ToolTip="{Binding Note}"
-                                                      Margin="0,4">
+                                                      Margin="16,4,0,4">
                                                 <TextBlock Text="{Binding DisplayName}"/>
                                             </CheckBox>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
+                                    <ItemsControl.GroupStyle>
+                                        <GroupStyle>
+                                            <GroupStyle.HeaderTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
+                                                               Foreground="{StaticResource AccentBrush}"
+                                                               Margin="0,14,0,2"/>
+                                                </DataTemplate>
+                                            </GroupStyle.HeaderTemplate>
+                                        </GroupStyle>
+                                    </ItemsControl.GroupStyle>
                                 </ItemsControl>
                             </StackPanel>
                         </Border>
-
-                    </StackPanel>
-                </ScrollViewer>
+                    </ScrollViewer>
+                </Grid>
             </TabItem>
 
             <!-- ================= TAB 2: OVERZETTEN ================= -->
@@ -185,6 +218,35 @@
                                  FontFamily="Consolas" Padding="12" Background="Transparent"/>
                     </Border>
                 </Grid>
+            </TabItem>
+
+            <!-- ================= TAB 4: OVER ================= -->
+            <TabItem Header="Over">
+                <StackPanel Margin="0,12,0,0" HorizontalAlignment="Left" MaxWidth="560">
+                    <Border Style="{StaticResource CardBorder}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                <Image Source="icon.ico" Width="40" Height="40" Margin="0,0,12,0"/>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="PCTransfer11" Style="{StaticResource HeaderText}" Margin="0"/>
+                                    <TextBlock x:Name="AboutVersionText" Style="{StaticResource SubtleText}" Margin="0"/>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <TextBlock Text="Zet bestanden, programma-instellingen en persoonlijke Windows-instellingen over naar een andere pc - via het netwerk of via een back-upmap."
+                                       Style="{StaticResource SubtleText}" Margin="0,12,0,12" TextWrapping="Wrap"/>
+
+                            <TextBlock Margin="0,0,0,2">
+                                <Run Text="Eigenaar: " FontWeight="SemiBold"/>
+                                <Run Text="Darkerst Inc."/>
+                            </TextBlock>
+                            <TextBlock Text="© Darkerst Inc. Alle rechten voorbehouden." Style="{StaticResource SubtleText}" Margin="0,0,0,12"/>
+
+                            <TextBlock Text="Deze software wordt geleverd zonder enige garantie. Gebruik op eigen risico."
+                                       Style="{StaticResource SubtleText}" Margin="0"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
             </TabItem>
 
         </TabControl>

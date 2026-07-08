@@ -17,10 +17,12 @@ public static class KnownApps
 
         return new List<AppProfile>
         {
+            // ---------------- Browsers ----------------
             new AppProfile
             {
                 Id = "chrome",
                 DisplayName = "Google Chrome (bladwijzers, instellingen)",
+                Category = "Browsers",
                 ResolveDataFolder = () =>
                 {
                     var path = Path.Combine(localAppData, "Google", "Chrome", "User Data", "Default");
@@ -33,6 +35,7 @@ public static class KnownApps
             {
                 Id = "edge",
                 DisplayName = "Microsoft Edge (bladwijzers, instellingen)",
+                Category = "Browsers",
                 ResolveDataFolder = () =>
                 {
                     var path = Path.Combine(localAppData, "Microsoft", "Edge", "User Data", "Default");
@@ -44,6 +47,7 @@ public static class KnownApps
             {
                 Id = "firefox",
                 DisplayName = "Mozilla Firefox (bladwijzers, instellingen)",
+                Category = "Browsers",
                 ResolveDataFolder = () =>
                 {
                     var profilesRoot = Path.Combine(roamingAppData, "Mozilla", "Firefox", "Profiles");
@@ -59,6 +63,7 @@ public static class KnownApps
             {
                 Id = "opera",
                 DisplayName = "Opera (bladwijzers, instellingen)",
+                Category = "Browsers",
                 ResolveDataFolder = () =>
                 {
                     var path = Path.Combine(roamingAppData, "Opera Software", "Opera Stable");
@@ -70,6 +75,7 @@ public static class KnownApps
             {
                 Id = "ie_edge_favorites",
                 DisplayName = "Favorieten (Internet Explorer / Edge)",
+                Category = "Browsers",
                 ResolveDataFolder = () =>
                 {
                     var path = Environment.GetFolderPath(Environment.SpecialFolder.Favorites);
@@ -78,10 +84,13 @@ public static class KnownApps
                 Note = "Internet Explorer is verwijderd uit Windows 11, maar gebruikte dezelfde Favorieten-map " +
                        "als Edge nog altijd gebruikt - deze map wordt hier meegenomen."
             },
+
+            // ---------------- Communicatie & e-mail ----------------
             new AppProfile
             {
                 Id = "thunderbird",
                 DisplayName = "Mozilla Thunderbird (e-mail, adresboek, instellingen)",
+                Category = "Communicatie & e-mail",
                 ResolveDataFolder = () =>
                 {
                     var profilesRoot = Path.Combine(roamingAppData, "Thunderbird", "Profiles");
@@ -97,6 +106,7 @@ public static class KnownApps
             {
                 Id = "outlook",
                 DisplayName = "Outlook (.pst / .ost e-mailbestanden)",
+                Category = "Communicatie & e-mail",
                 ResolveDataFolder = () =>
                 {
                     // Standaardlocatie voor .ost (cache) en eventuele .pst-bestanden.
@@ -113,6 +123,7 @@ public static class KnownApps
             {
                 Id = "skype",
                 DisplayName = "Skype (chatgeschiedenis, instellingen)",
+                Category = "Communicatie & e-mail",
                 ResolveDataFolder = () =>
                 {
                     var path = Path.Combine(roamingAppData, "Microsoft", "Skype for Desktop");
@@ -121,10 +132,13 @@ public static class KnownApps
                 Note = "Lokale chatgeschiedenis en instellingen van de huidige Skype-app. " +
                        "(MSN Messenger en AIM bestaan al jaren niet meer en hebben dus niets om over te zetten.)"
             },
+
+            // ---------------- Multimedia & downloads ----------------
             new AppProfile
             {
                 Id = "qbittorrent",
                 DisplayName = "qBittorrent (instellingen, categorieën, torrent-status)",
+                Category = "Multimedia & downloads",
                 ResolveDataFolder = () =>
                 {
                     var path = Path.Combine(roamingAppData, "qBittorrent");
@@ -138,6 +152,7 @@ public static class KnownApps
             {
                 Id = "aimp",
                 DisplayName = "AIMP (afspeellijsten, instellingen)",
+                Category = "Multimedia & downloads",
                 ResolveDataFolder = () =>
                 {
                     var path = Path.Combine(roamingAppData, "AIMP");
@@ -149,6 +164,7 @@ public static class KnownApps
             {
                 Id = "itunes",
                 DisplayName = "iTunes (bibliotheek)",
+                Category = "Multimedia & downloads",
                 ResolveDataFolder = () =>
                 {
                     var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), "iTunes");
@@ -157,10 +173,13 @@ public static class KnownApps
                 Note = "De iTunes-bibliotheek (iTunes Library.itl) en, als 'iTunes Media' op de standaardlocatie " +
                        "staat, ook de muziek/video's zelf. Bij een aangepaste mediamap: voeg die apart toe op tab 1."
             },
+
+            // ---------------- Ontwikkeltools ----------------
             new AppProfile
             {
                 Id = "vscode",
                 DisplayName = "Visual Studio Code (instellingen, sneltoetsen)",
+                Category = "Ontwikkeltools",
                 ResolveDataFolder = () =>
                 {
                     var path = Path.Combine(roamingAppData, "Code", "User");
@@ -172,6 +191,7 @@ public static class KnownApps
             {
                 Id = "winterminal",
                 DisplayName = "Windows Terminal (instellingen)",
+                Category = "Ontwikkeltools",
                 ResolveDataFolder = () =>
                 {
                     var packagesRoot = Path.Combine(localAppData, "Packages");
@@ -183,13 +203,110 @@ public static class KnownApps
                 },
                 Note = "settings.json met kleurenschema's, profielen en sneltoetsen."
             },
+
+            // ---------------- Windows-instellingen (register, HKCU-only, geen adminrechten nodig) ----------------
             new AppProfile
             {
-                Id = "desktop",
-                DisplayName = "Bureaubladachtergrond en persoonlijke instellingen",
+                Id = "windows_desktop",
+                DisplayName = "Bureaubladachtergrond en kleuren",
+                Category = "Windows-instellingen",
                 ResolveDataFolder = () => null, // alleen registry, geen bestandsmap
-                RegistryKey = @"HKEY_CURRENT_USER\Control Panel\Desktop",
-                Note = "Achtergrondafbeelding-instelling en gerelateerde voorkeuren (via het register)."
+                RegistryKeys = new[]
+                {
+                    @"HKEY_CURRENT_USER\Control Panel\Desktop",
+                    @"HKEY_CURRENT_USER\Control Panel\Colors",
+                    @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes"
+                },
+                Note = "Achtergrondafbeelding, kleurinstellingen en het actieve thema (via het register)."
+            },
+            new AppProfile
+            {
+                Id = "windows_explorer",
+                DisplayName = "Verkenner en taakbalk (weergave-instellingen)",
+                Category = "Windows-instellingen",
+                ResolveDataFolder = () => null,
+                RegistryKeys = new[]
+                {
+                    @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced",
+                    @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Taskband"
+                },
+                Note = "Bestandsextensies tonen, verborgen bestanden, taakbalk-indeling en vergelijkbare " +
+                       "Verkenner-voorkeuren."
+            },
+            new AppProfile
+            {
+                Id = "windows_mouse_keyboard",
+                DisplayName = "Muis en toetsenbord (snelheid, aanwijzers)",
+                Category = "Windows-instellingen",
+                ResolveDataFolder = () => null,
+                RegistryKeys = new[]
+                {
+                    @"HKEY_CURRENT_USER\Control Panel\Mouse",
+                    @"HKEY_CURRENT_USER\Control Panel\Keyboard"
+                },
+                Note = "Aanwijzersnelheid, dubbelklik-tijd, aanwijzerschema's en toetsenbordherhaling."
+            },
+            new AppProfile
+            {
+                Id = "windows_regional",
+                DisplayName = "Taal- en regio-instellingen",
+                Category = "Windows-instellingen",
+                ResolveDataFolder = () => null,
+                RegistryKeys = new[] { @"HKEY_CURRENT_USER\Control Panel\International" },
+                Note = "Datum-, tijd- en getalnotatie, en de standaard weergavetaal van dit gebruikersaccount."
+            },
+            new AppProfile
+            {
+                Id = "windows_sounds",
+                DisplayName = "Geluidsschema (systeemgeluiden)",
+                Category = "Windows-instellingen",
+                ResolveDataFolder = () => null,
+                RegistryKeys = new[] { @"HKEY_CURRENT_USER\AppEvents" },
+                Note = "Het gekozen geluidsschema en eventuele aangepaste systeemgeluiden."
+            },
+            new AppProfile
+            {
+                Id = "windows_network_drives",
+                DisplayName = "Gekoppelde netwerkschijven (verkende mappen)",
+                Category = "Netwerk",
+                ResolveDataFolder = () => null,
+                RegistryKeys = new[] { @"HKEY_CURRENT_USER\Network" },
+                Note = "Onthoudt welke netwerkschijfletters (bv. Z:) naar welke netwerkmap wijzen. " +
+                       "Werkt alleen als die netwerkmap op de nieuwe pc ook bereikbaar is."
+            },
+            new AppProfile
+            {
+                Id = "windows_proxy",
+                DisplayName = "Proxy-instelling (Instellingen > Netwerk en internet > Proxy)",
+                Category = "Netwerk",
+                ResolveDataFolder = () => null,
+                RegistryKeys = new[] { @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Internet Settings" },
+                Note = "De proxy-instelling die de meeste browsers en apps gebruiken. Vereist geen adminrechten."
+            },
+            new AppProfile
+            {
+                Id = "windows_network_adapter",
+                DisplayName = "Netwerkadapter (vast IP, DNS, gateway) en systeemproxy",
+                Category = "Netwerk",
+                ResolveDataFolder = () => null,
+                CustomExport = (destDir, ct, log) => ElevatedNetworkHelper.RunElevatedExportAsync("adapter", destDir, ct, log),
+                CustomImport = (sourceDir, ct, log) => ElevatedNetworkHelper.RunElevatedImportAsync("adapter", sourceDir, ct, log),
+                Note = "Vereist adminrechten: Windows toont zowel bij het maken als bij het terugzetten van de " +
+                       "back-up een UAC-bevestigingsvenster. Bevat een vast IP-adres, DNS-servers en gateway per " +
+                       "netwerkadapter, plus de systeembrede (WinHTTP-)proxy. Weiger je de UAC-prompt, dan wordt " +
+                       "dit onderdeel overgeslagen."
+            },
+            new AppProfile
+            {
+                Id = "windows_wifi",
+                DisplayName = "Wifi-netwerken (namen en wachtwoorden)",
+                Category = "Netwerk",
+                ResolveDataFolder = () => null,
+                CustomExport = (destDir, ct, log) => ElevatedNetworkHelper.RunElevatedExportAsync("wifi", destDir, ct, log),
+                CustomImport = (sourceDir, ct, log) => ElevatedNetworkHelper.RunElevatedImportAsync("wifi", sourceDir, ct, log),
+                Note = "Vereist adminrechten (UAC) om de wachtwoorden in klare tekst te kunnen meenemen. Weiger je " +
+                       "de UAC-prompt, dan gaan alleen de netwerknaam en het beveiligingstype mee (zonder " +
+                       "wachtwoord) - dat lukt namelijk wel zonder adminrechten."
             },
         };
     }

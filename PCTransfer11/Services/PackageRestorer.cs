@@ -122,9 +122,16 @@ public sealed class PackageRestorer
             ct.ThrowIfCancellationRequested();
             var app = KnownApps.GetAll().FirstOrDefault(a => a.Id == settingsEntry.AppId);
 
-            if (settingsEntry.HasDataFolder)
+            string appStagingDir = Path.Combine(backupFolderPath, PackageBuilder.SettingsFolderName, settingsEntry.AppId);
+            string dataSource = Path.Combine(appStagingDir, "data");
+
+            if (settingsEntry.HasCustomData && app?.CustomImport != null)
             {
-                string dataSource = Path.Combine(backupFolderPath, PackageBuilder.SettingsFolderName, settingsEntry.AppId, "data");
+                _log.Report($"Instellingen terugzetten: {settingsEntry.DisplayName} ...");
+                await app.CustomImport(dataSource, ct, _log);
+            }
+            else if (settingsEntry.HasDataFolder)
+            {
                 string? dataDestination = app?.ResolveDataFolder();
                 if (dataDestination == null)
                 {
@@ -140,11 +147,28 @@ public sealed class PackageRestorer
 
             if (settingsEntry.HasRegistryExport)
             {
-                string regFile = Path.Combine(backupFolderPath, PackageBuilder.SettingsFolderName, settingsEntry.AppId, "registry.reg");
-                if (File.Exists(regFile))
+                var regFiles = Directory.Exists(appStagingDir)
+                    ? Directory.GetFiles(appStagingDir, "registry_*.reg")
+                        .Concat(Directory.GetFiles(appStagingDir, "registry.reg")) // oudere back-ups (vóór meervoudige sleutels)
+                        .Distinct()
+                        .OrderBy(f => f)
+                    : Enumerable.Empty<string>();
+
+                bool any = false;
+                foreach (string regFile in regFiles)
                 {
+                    any = true;
                     _log.Report($"Registerinstellingen terugzetten: {settingsEntry.DisplayName} ...");
                     await ImportRegistryFileAsync(regFile, ct);
+                }
+                if (!any)
+                    _log.Report($"Registerbestand voor '{settingsEntry.DisplayName}' ontbreekt in de back-up - overgeslagen.");
+
+                if (any && settingsEntry.AppId == "windows_network_drives")
+                {
+                    _log.Report("Let op: de netwerkschijfletters zijn teruggezet, maar de bijbehorende " +
+                                "inloggegevens staan (versleuteld) in Windows Credential Manager en gaan nooit " +
+                                "mee - vul het wachtwoord bij de eerste keer verbinden opnieuw in.");
                 }
             }
             ReportPercent();

@@ -10,10 +10,19 @@
     <RootNamespace>PCTransfer11</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>icon.ico</ApplicationIcon>
-    <Version>1.1.0.0</Version>
+    <Version>1.2.0.0</Version>
+    <Company>Darkerst Inc.</Company>
+    <Product>PCTransfer11</Product>
+    <Copyright>© Darkerst Inc.</Copyright>
     <!-- Geen enkele externe NuGet-package vereist: alles gebruikt de
          ingebouwde .NET/WPF-bibliotheken, zodat dit project zonder
          internetverbinding compileert zodra de .NET SDK is geïnstalleerd. -->
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Ook als Resource meegenomen (naast ApplicationIcon hierboven) zodat
+         de About-tab het icoon via een relatieve pack-URI kan tonen. -->
+    <Resource Include="icon.ico" />
+  </ItemGroup>
 
 </Project>
